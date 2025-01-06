@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import useMediaUpload, { Attachment } from "@/hookes/useMediaUpload";
+import useMediaUpload, { Attachment } from "@/hooks/useMediaUpload";
 import { useDropzone } from "@uploadthing/react";
 export default function PostEditor() {
   const { user } = useSession();

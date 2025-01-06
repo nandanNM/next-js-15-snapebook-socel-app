@@ -7,7 +7,7 @@ import { Dialog, DialogTitle } from "@radix-ui/react-dialog";
 import React, { ChangeEvent, FormEvent, use, useState } from "react";
 import { DefaultStreamChatGenerics, useChatContext } from "stream-chat-react";
 import { useSession } from "../SessionProvider";
-import useDebounce from "@/hookes/useDebounce";
+import useDebounce from "@/hooks/useDebounce";
 import { UserResponse } from "stream-chat";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, Loader2, Pencil, SearchIcon, X } from "lucide-react";
