@@ -17,35 +17,33 @@ export const fileRouter = {
       // delete file
       const oldAvatarUrl = metadata.user.avatarUrl;
       if (oldAvatarUrl) {
-        const key = oldAvatarUrl.split(
-          `/a/${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}/`,
-        )[1];
+        const key = oldAvatarUrl.split(`/f/`)[1];
         await new UTApi().deleteFiles(key);
       }
       // update user
 
-      const newAvatarUrl = file.url.replace(
-        "/f/",
-        `/a/${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}/`,
-      );
+      // const newAvatarUrl = file.url.replace(
+      //   "/f/",
+      //   `/a/${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}/`,
+      // );
       await Promise.all([
         prisma.user.update({
           where: {
             id: metadata.user.id,
           },
           data: {
-            avatarUrl: newAvatarUrl,
+            avatarUrl: file.url,
           },
         }),
         streamServerClient.partialUpdateUser({
           id: metadata.user.id,
           set: {
-            image: newAvatarUrl,
+            image: file.url,
           },
         }),
       ]);
 
-      return { avatarUrl: newAvatarUrl };
+      return { avatarUrl: file.url };
     }),
   attachment: f({
     image: { maxFileSize: "4MB", maxFileCount: 4 },
@@ -59,10 +57,7 @@ export const fileRouter = {
     .onUploadComplete(async ({ file }) => {
       const media = await prisma.media.create({
         data: {
-          url: file.url.replace(
-            "/f/",
-            `/a/${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}/`,
-          ),
+          url: file.url,
           type: file.type.startsWith("image") ? "IMAGE" : "VIDEO",
         },
       });
