@@ -17,7 +17,7 @@ import PushMessageListener from "./PushMessageListener";
 export default function Chat() {
   const chatClient = useInitializeChatClient();
   const { resolvedTheme } = useTheme();
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   useEffect(() => {
     async function setUpServiceWorker() {
       try {

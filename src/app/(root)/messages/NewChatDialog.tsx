@@ -1,21 +1,21 @@
+import LoadingButton from "@/components/LoadingButton";
 import {
+  Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Dialog, DialogTitle } from "@radix-ui/react-dialog";
-import React, { ChangeEvent, FormEvent, use, useState } from "react";
+
+import UserAvatar from "@/components/UserAvatar";
+import useDebounce from "@/hooks/useDebounce";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Check, Loader2, SearchIcon, X } from "lucide-react";
+import { useState } from "react";
+import { UserResponse } from "stream-chat";
 import { DefaultStreamChatGenerics, useChatContext } from "stream-chat-react";
 import { useSession } from "../SessionProvider";
-import useDebounce from "@/hooks/useDebounce";
-import { UserResponse } from "stream-chat";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, Loader2, Pencil, SearchIcon, X } from "lucide-react";
-import UserAvatar from "@/components/UserAvatar";
 import { toast } from "sonner";
-import LoadingButton from "@/components/LoadingButton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 interface NewChatDialogProps {
   onOpenChange: (open: boolean) => void;
@@ -23,20 +23,20 @@ interface NewChatDialogProps {
 }
 
 export default function NewChatDialog({
-  onChatCreated,
   onOpenChange,
+  onChatCreated,
 }: NewChatDialogProps) {
   const { client, setActiveChannel } = useChatContext();
+
   const { user: loggedInUser } = useSession();
-  const [searchInput, setSearchInput] = useState<string>("");
-  const searchInputDebounced = useDebounce(searchInput, 350);
+
+  const [searchInput, setSearchInput] = useState("");
+  const searchInputDebounced = useDebounce(searchInput);
+
   const [selectedUsers, setSelectedUsers] = useState<
     UserResponse<DefaultStreamChatGenerics>[]
   >([]);
-  const [nameInputValue, setNameInputValue] = useState<string>("");
-  console.log("name input", nameInputValue);
-  const [isGroupNameDialogOpen, setGroupNameDialogOpen] =
-    useState<boolean>(false);
+
   const { data, isFetching, isError, isSuccess } = useQuery({
     queryKey: ["stream-users", searchInputDebounced],
     queryFn: async () =>
@@ -47,12 +47,8 @@ export default function NewChatDialog({
           ...(searchInputDebounced
             ? {
                 $or: [
-                  {
-                    name: { $autocomplete: searchInputDebounced },
-                  },
-                  {
-                    username: { $autocomplete: searchInputDebounced },
-                  },
+                  { name: { $autocomplete: searchInputDebounced } },
+                  { username: { $autocomplete: searchInputDebounced } },
                 ],
               }
             : {}),
@@ -67,21 +63,21 @@ export default function NewChatDialog({
       const channel = client.channel("messaging", {
         members: [loggedInUser.id, ...selectedUsers.map((u) => u.id)],
         name:
-          nameInputValue ||
-          (selectedUsers.length > 1
+          selectedUsers.length > 1
             ? loggedInUser.displayName +
               ", " +
               selectedUsers.map((u) => u.name).join(", ")
-            : undefined),
+            : undefined,
       });
       await channel.create();
       return channel;
     },
     onSuccess: (channel) => {
-      setActiveChannel(channel), onChatCreated();
+      setActiveChannel(channel);
+      onChatCreated();
     },
-    onError: (error) => {
-      console.log("Error starting chat", error);
+    onError(error) {
+      console.error("Error starting chat", error);
       toast.error("Error starting chat. Please try again.");
     },
   });
@@ -136,7 +132,7 @@ export default function NewChatDialog({
               ))}
             {isSuccess && !data.users.length && (
               <p className="my-3 text-center text-muted-foreground">
-                No user found. Try a different name.
+                No users found. Try a different name.
               </p>
             )}
             {isFetching && <Loader2 className="mx-auto my-3 animate-spin" />}
@@ -147,26 +143,12 @@ export default function NewChatDialog({
             )}
           </div>
         </div>
-        <DialogFooter className="gap-4 px-6 pb-6">
-          <Button
-            variant="outline"
-            onClick={() => setGroupNameDialogOpen(true)}
-            asChild
-          >
-            Enter group name
-            <Pencil />
-          </Button>
+        <DialogFooter className="px-6 pb-6">
           <LoadingButton
             disabled={!selectedUsers.length}
             loading={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            <SelectChannelNameDialog
-              open={isGroupNameDialogOpen}
-              onClose={() => setGroupNameDialogOpen(false)}
-              value={nameInputValue}
-              onChange={(e) => setNameInputValue(e.target.value)}
-            />
             Start chat
           </LoadingButton>
         </DialogFooter>
@@ -181,7 +163,7 @@ interface UserResultProps {
   onClick: () => void;
 }
 
-function UserResult({ onClick, selected, user }: UserResultProps) {
+function UserResult({ user, selected, onClick }: UserResultProps) {
   return (
     <button
       className="flex w-full items-center justify-between px-4 py-2.5 transition-colors hover:bg-muted/50"
@@ -203,6 +185,7 @@ interface SelectedUserTagProps {
   user: UserResponse<DefaultStreamChatGenerics>;
   onRemove: () => void;
 }
+
 function SelectedUserTag({ user, onRemove }: SelectedUserTagProps) {
   return (
     <button
@@ -213,49 +196,5 @@ function SelectedUserTag({ user, onRemove }: SelectedUserTagProps) {
       <p className="font-bold">{user.name}</p>
       <X className="mx-2 size-5 text-muted-foreground" />
     </button>
-  );
-}
-
-interface SelectChannelNameDialogProps {
-  open: boolean;
-  onClose: () => void;
-  value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
-}
-function SelectChannelNameDialog({
-  open,
-  onClose,
-  value,
-  onChange,
-  onSubmit,
-}: SelectChannelNameDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card p-0">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle>Enter Group Name</DialogTitle>
-        </DialogHeader>
-        <div className="px-6 py-4">
-          <Input
-            type="text"
-            autoFocus
-            placeholder="Group name.."
-            value={value}
-            onChange={onChange}
-            className="h-12 w-full px-4"
-          />
-        </div>
-        <DialogFooter className="px-6 pb-6">
-          <Button
-            disabled={!value || value.length <= 3}
-            onClick={onClose}
-            type="button"
-          >
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
